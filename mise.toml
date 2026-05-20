@@ -1,0 +1,11 @@
+[tools]
+shellcheck = "0.11.0"
+
+[tasks.lint]
+description = "Lint shell scripts"
+run = "shellcheck -x scripts/*.sh"
+
+[tasks.check]
+description = "Run local checks"
+depends = ["lint"]
+run = "true"
