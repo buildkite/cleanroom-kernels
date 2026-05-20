@@ -5,7 +5,11 @@ shellcheck = "0.11.0"
 description = "Lint shell scripts"
 run = "shellcheck -x scripts/*.sh"
 
+[tasks.syntax]
+description = "Check shell script syntax"
+run = "bash -n scripts/*.sh"
+
 [tasks.check]
 description = "Run local checks"
-depends = ["lint"]
+depends = ["lint", "syntax"]
 run = "true"

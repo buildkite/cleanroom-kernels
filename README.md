@@ -14,8 +14,10 @@ Requirements:
 - `python3`
 - `git`
 - `tar`
-- ARM64 Docker execution support when building on a non-ARM64 host, for example
-  `qemu-user-static` plus `binfmt-support` on Ubuntu
+- ARM64 Docker execution support only when overriding
+  `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM=linux/arm64` on a
+  non-ARM64 host, for example `qemu-user-static` plus `binfmt-support` on
+  Ubuntu
 
 Build the release assets locally:
 
@@ -39,8 +41,18 @@ scripts/ci-build-release-assets.sh
 ```
 
 That writes direct release assets under `dist/kernels/`, creates
-`dist/kernels.tar.gz`, and uploads both through `buildkite-agent` when it is
-available.
+`dist/kernels.tar.gz`, and uploads both as Buildkite artifacts through
+`buildkite-agent` when it is available.
+
+Tagged Buildkite builds then run:
+
+```sh
+scripts/ci-publish-release.sh
+```
+
+That downloads `dist/kernels.tar.gz`, creates the matching GitHub Release in
+`buildkite/cleanroom-kernels` when needed, and uploads the individual kernel
+assets plus the bundled `kernels.tar.gz`.
 
 ## Configuration
 
@@ -50,11 +62,14 @@ Useful environment variables:
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE`, default `rootfs`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH`, default `arm64`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE`, default `ubuntu:22.04`
-- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM`, default `linux/arm64`
+- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM`, default `linux/amd64`
+- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE`, default
+  `aarch64-linux-gnu-` when building arm64 from a non-arm64 Docker platform
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ASSET_BASE`
 - `CLEANROOM_KERNELS_GITHUB_REPOSITORY`, default `buildkite/cleanroom-kernels`
 - `CLEANROOM_KERNELS_RELEASE_TAG`, default empty unless `BUILDKITE_TAG` is set
+- `CLEANROOM_KERNELS_GITHUB_RELEASE_TOKEN`, used by tagged release publishing
 
 ## Cleanroom Handoff
 
@@ -63,5 +78,6 @@ The intended integration is:
 
 1. This repo builds and releases kernel artifacts with manifest checksums.
 2. Cleanroom release jobs fetch a pinned kernel artifact set from this repo.
-3. Cleanroom publishes the verified files as direct assets on its own release,
-   preserving current runtime resolution behavior.
+3. Cleanroom either preserves current runtime behavior by re-publishing those
+   verified files on its own releases, or migrates runtime resolution to read
+   `buildkite/cleanroom-kernels` releases directly.

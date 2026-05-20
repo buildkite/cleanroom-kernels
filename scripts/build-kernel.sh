@@ -5,16 +5,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 KERNEL_VERSION="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION:-6.1.155}"
-KERNEL_PROFILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE:-initrd}"
+KERNEL_PROFILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE:-rootfs}"
 KERNEL_ARCH="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH:-arm64}"
 DOCKER_IMAGE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE:-ubuntu:22.04}"
-DOCKER_PLATFORM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM:-linux/${KERNEL_ARCH}}"
+DOCKER_PLATFORM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM:-linux/amd64}"
 BUILD_VOLUME="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_BUILD_VOLUME:-cleanroom-darwin-vz-minimal-kernel}"
 DEFAULT_KERNEL_TARBALL_SHA256=""
 if [[ "${KERNEL_VERSION}" == "6.1.155" ]]; then
   DEFAULT_KERNEL_TARBALL_SHA256="c29387aeee085fbcbd91236224b9df805063bac43615e75cea2c6b29604a5c73"
 fi
 KERNEL_TARBALL_SHA256="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256:-${DEFAULT_KERNEL_TARBALL_SHA256}}"
+DEFAULT_CROSS_COMPILE=""
+if [[ "${KERNEL_ARCH}" == "arm64" && "${DOCKER_PLATFORM}" != "linux/arm64" ]]; then
+  DEFAULT_CROSS_COMPILE="aarch64-linux-gnu-"
+fi
+KERNEL_CROSS_COMPILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE-${DEFAULT_CROSS_COMPILE}}"
 
 case "${KERNEL_ARCH}" in
   arm64) ;;
@@ -51,6 +56,7 @@ docker run --rm \
   -e "KERNEL_VERSION=${KERNEL_VERSION}" \
   -e "KERNEL_PROFILE=${KERNEL_PROFILE}" \
   -e "KERNEL_ARCH=${KERNEL_ARCH}" \
+  -e "KERNEL_CROSS_COMPILE=${KERNEL_CROSS_COMPILE}" \
   -e "KERNEL_TARBALL_SHA256=${KERNEL_TARBALL_SHA256}" \
   -e "OUTPUT_BASENAME=${OUTPUT_BASENAME}" \
   -e "CONFIG_BASENAME=${CONFIG_BASENAME}" \
@@ -61,8 +67,7 @@ docker run --rm \
     set -euo pipefail
 
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update
-    apt-get install -y --no-install-recommends \
+    packages=(
       bc \
       bison \
       build-essential \
@@ -72,6 +77,12 @@ docker run --rm \
       libelf-dev \
       libssl-dev \
       xz-utils
+    )
+    if [[ -n "${KERNEL_CROSS_COMPILE}" ]]; then
+      packages+=(gcc-aarch64-linux-gnu)
+    fi
+    apt-get update
+    apt-get install -y --no-install-recommends "${packages[@]}"
 
     src="/build/linux-${KERNEL_VERSION}"
     tarball="/build/linux-${KERNEL_VERSION}.tar.xz"
@@ -107,7 +118,7 @@ docker run --rm \
     rm -rf "${out}"
     mkdir -p "${out}"
 
-    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" tinyconfig
+    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" tinyconfig
     "${src}/scripts/config" --file "${out}/.config" \
       -e 64BIT \
       -e ARM64_4K_PAGES \
@@ -208,8 +219,8 @@ docker run --rm \
         -e DEVTMPFS_MOUNT
     fi
 
-    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" olddefconfig
-    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" -j"$(nproc)" Image
+    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" olddefconfig
+    make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" -j"$(nproc)" Image
 
     cp "${out}/arch/${KERNEL_ARCH}/boot/Image" "/out/${OUTPUT_BASENAME}"
     cp "${out}/.config" "/out/${CONFIG_BASENAME}"

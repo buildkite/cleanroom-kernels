@@ -1,0 +1,21 @@
+steps:
+  - label: ":penguin: Build kernel release assets"
+    key: kernel-release-assets
+    command: "scripts/ci-build-release-assets.sh"
+    concurrency: 1
+    concurrency_group: cleanroom-kernels-release-assets
+    timeout_in_minutes: 90
+    agents:
+      queue: cleanroom
+
+  - wait
+
+  - label: ":rocket: Publish release"
+    command: |
+      if [[ -z "$${BUILDKITE_TAG:-}" ]]; then
+        echo "Skipping release publish because this is not a tagged build"
+        exit 0
+      fi
+      scripts/ci-publish-release.sh
+    agents:
+      queue: hosted
