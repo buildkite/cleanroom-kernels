@@ -54,6 +54,18 @@ That downloads `dist/kernels.tar.gz`, creates the matching GitHub Release in
 `buildkite/cleanroom-kernels` when needed, and uploads the individual kernel
 assets plus the bundled `kernels.tar.gz`.
 
+## Release
+
+Tag and push the next conventional version:
+
+```sh
+mise run release
+```
+
+The task runs local checks, fetches tags, uses `svu next` to calculate the next
+version, tags the current commit, and pushes the tag. Buildkite publishes
+GitHub Release assets from tagged builds.
+
 ## Configuration
 
 Useful environment variables:

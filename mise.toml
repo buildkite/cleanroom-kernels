@@ -1,5 +1,6 @@
 [tools]
 shellcheck = "0.11.0"
+svu = "3.4.0"
 
 [tasks.lint]
 description = "Lint shell scripts"
@@ -13,3 +14,8 @@ run = "bash -n scripts/*.sh"
 description = "Run local checks"
 depends = ["lint", "syntax"]
 run = "true"
+
+[tasks.release]
+description = "Tag the next version and push to trigger a release"
+depends = ["check"]
+run = "scripts/release.sh"
