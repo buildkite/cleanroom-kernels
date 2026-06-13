@@ -3,8 +3,9 @@
 Build and publish managed kernel assets used by Cleanroom backends.
 
 This repository currently owns the experimental Apple Silicon `darwin-vz`
-minimal rootfs-profile Linux kernel. It produces the same release asset names
-and manifest shape that Cleanroom already resolves from GitHub Releases.
+minimal Linux kernels used by Cleanroom and SporeVM smoke tests. It produces
+the same release asset names and manifest shape that Cleanroom already resolves
+from GitHub Releases.
 
 ## Build
 
@@ -25,12 +26,16 @@ Build the release assets locally:
 scripts/build-release-assets.sh dist/kernels
 ```
 
-The build writes:
+The default build writes both `rootfs` and `initrd` profiles:
 
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image`
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image.config`
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image.sha256`
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>.manifest.json`
+- `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>-Image`
+- `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>-Image.config`
+- `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>-Image.sha256`
+- `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>.manifest.json`
 
 ## CI Contract
 
@@ -71,7 +76,9 @@ GitHub Release assets from tagged builds.
 Useful environment variables:
 
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION`, default `6.1.155`
-- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE`, default `rootfs`
+- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILES`, default `rootfs initrd`
+- `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE`, optional single-profile
+  override for local builds
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH`, default `arm64`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE`, default `ubuntu:22.04`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM`, default `linux/amd64`

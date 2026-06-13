@@ -28,7 +28,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 KERNEL_VERSION="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION:-6.1.155}"
-KERNEL_PROFILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE:-rootfs}"
+KERNEL_PROFILES_RAW="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILES:-}"
+if [[ -n "${KERNEL_PROFILES_RAW}" ]]; then
+  read -r -a KERNEL_PROFILES <<<"${KERNEL_PROFILES_RAW}"
+elif [[ -n "${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE+x}" ]]; then
+  KERNEL_PROFILES=("${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE}")
+else
+  KERNEL_PROFILES=(rootfs initrd)
+fi
 KERNEL_ARCH="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH:-arm64}"
 DOCKER_IMAGE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE:-ubuntu:22.04}"
 DOCKER_PLATFORM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM:-linux/amd64}"
@@ -42,12 +49,22 @@ if [[ "${KERNEL_ARCH}" == "arm64" && "${DOCKER_PLATFORM}" != "linux/arm64" ]]; t
 fi
 KERNEL_CROSS_COMPILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE-${DEFAULT_CROSS_COMPILE}}"
 
-case "${KERNEL_PROFILE}" in
-  rootfs) ;;
-  *)
-    die "release kernel profile must be rootfs, got ${KERNEL_PROFILE}"
-    ;;
-esac
+if [[ "${#KERNEL_PROFILES[@]}" -eq 0 ]]; then
+  die "at least one kernel profile is required"
+fi
+
+if [[ "${#KERNEL_PROFILES[@]}" -gt 1 && -n "${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ASSET_BASE:-}" ]]; then
+  die "CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ASSET_BASE is only supported when building a single profile"
+fi
+
+for profile in "${KERNEL_PROFILES[@]}"; do
+  case "${profile}" in
+    initrd|rootfs) ;;
+    *)
+      die "release kernel profile must be initrd or rootfs, got ${profile}"
+      ;;
+  esac
+done
 
 case "${KERNEL_ARCH}" in
   arm64) ;;
@@ -61,48 +78,53 @@ require_command git
 require_command python3
 
 OUTPUT_DIR="${1:-${REPO_ROOT}/dist/kernels}"
-ASSET_BASE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ASSET_BASE:-cleanroom-darwin-vz-minimal-${KERNEL_PROFILE}-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}"
-IMAGE_NAME="${ASSET_BASE}-Image"
-IMAGE_PATH="${OUTPUT_DIR}/${IMAGE_NAME}"
-CONFIG_PATH="${IMAGE_PATH}.config"
-SHA256_PATH="${IMAGE_PATH}.sha256"
-MANIFEST_PATH="${OUTPUT_DIR}/${ASSET_BASE}.manifest.json"
-
 mkdir -p "${OUTPUT_DIR}"
-rm -f "${IMAGE_PATH}" "${CONFIG_PATH}" "${SHA256_PATH}" "${MANIFEST_PATH}"
-
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE="${KERNEL_PROFILE}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH="${KERNEL_ARCH}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION="${KERNEL_VERSION}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE="${DOCKER_IMAGE}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" \
-CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
-  "${SCRIPT_DIR}/build-kernel.sh" "${IMAGE_PATH}" >/dev/null
-
-[[ -f "${IMAGE_PATH}" ]] || die "kernel image was not created: ${IMAGE_PATH}"
-[[ -f "${CONFIG_PATH}" ]] || die "kernel config was not created: ${CONFIG_PATH}"
-
-KERNEL_SHA256="$(sha256_file "${IMAGE_PATH}")"
-printf '%s  %s\n' "${KERNEL_SHA256}" "${IMAGE_NAME}" > "${SHA256_PATH}"
 
 SOURCE_COMMIT="$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || printf 'unknown')"
 SOURCE_REPOSITORY="${CLEANROOM_KERNELS_GITHUB_REPOSITORY:-buildkite/cleanroom-kernels}"
 RELEASE_TAG="${CLEANROOM_KERNELS_RELEASE_TAG:-${BUILDKITE_TAG:-}}"
 
-ASSET_BASE="${ASSET_BASE}" \
-DOCKER_IMAGE="${DOCKER_IMAGE}" \
-DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
-IMAGE_NAME="${IMAGE_NAME}" \
-KERNEL_ARCH="${KERNEL_ARCH}" \
-KERNEL_PROFILE="${KERNEL_PROFILE}" \
-KERNEL_SHA256="${KERNEL_SHA256}" \
-KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
-KERNEL_VERSION="${KERNEL_VERSION}" \
-RELEASE_TAG="${RELEASE_TAG}" \
-SOURCE_COMMIT="${SOURCE_COMMIT}" \
-SOURCE_REPOSITORY="${SOURCE_REPOSITORY}" \
-python3 - <<'PY' > "${MANIFEST_PATH}"
+build_profile() {
+  local kernel_profile="$1"
+  local asset_base image_name image_path config_path sha256_path manifest_path kernel_sha256
+
+  asset_base="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ASSET_BASE:-cleanroom-darwin-vz-minimal-${kernel_profile}-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}"
+  image_name="${asset_base}-Image"
+  image_path="${OUTPUT_DIR}/${image_name}"
+  config_path="${image_path}.config"
+  sha256_path="${image_path}.sha256"
+  manifest_path="${OUTPUT_DIR}/${asset_base}.manifest.json"
+
+  rm -f "${image_path}" "${config_path}" "${sha256_path}" "${manifest_path}"
+
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE="${kernel_profile}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH="${KERNEL_ARCH}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION="${KERNEL_VERSION}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE="${DOCKER_IMAGE}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
+    "${SCRIPT_DIR}/build-kernel.sh" "${image_path}" >/dev/null
+
+  [[ -f "${image_path}" ]] || die "kernel image was not created: ${image_path}"
+  [[ -f "${config_path}" ]] || die "kernel config was not created: ${config_path}"
+
+  kernel_sha256="$(sha256_file "${image_path}")"
+  printf '%s  %s\n' "${kernel_sha256}" "${image_name}" > "${sha256_path}"
+
+  ASSET_BASE="${asset_base}" \
+  DOCKER_IMAGE="${DOCKER_IMAGE}" \
+  DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
+  IMAGE_NAME="${image_name}" \
+  KERNEL_ARCH="${KERNEL_ARCH}" \
+  KERNEL_PROFILE="${kernel_profile}" \
+  KERNEL_SHA256="${kernel_sha256}" \
+  KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
+  KERNEL_VERSION="${KERNEL_VERSION}" \
+  RELEASE_TAG="${RELEASE_TAG}" \
+  SOURCE_COMMIT="${SOURCE_COMMIT}" \
+  SOURCE_REPOSITORY="${SOURCE_REPOSITORY}" \
+  python3 - <<'PY' > "${manifest_path}"
 import json
 import os
 
@@ -136,7 +158,12 @@ manifest = {
 print(json.dumps(manifest, indent=2, sort_keys=True))
 PY
 
-printf '[build-release-assets] wrote %s\n' "${IMAGE_PATH}"
-printf '[build-release-assets] wrote %s\n' "${CONFIG_PATH}"
-printf '[build-release-assets] wrote %s\n' "${SHA256_PATH}"
-printf '[build-release-assets] wrote %s\n' "${MANIFEST_PATH}"
+  printf '[build-release-assets] wrote %s\n' "${image_path}"
+  printf '[build-release-assets] wrote %s\n' "${config_path}"
+  printf '[build-release-assets] wrote %s\n' "${sha256_path}"
+  printf '[build-release-assets] wrote %s\n' "${manifest_path}"
+}
+
+for profile in "${KERNEL_PROFILES[@]}"; do
+  build_profile "${profile}"
+done
