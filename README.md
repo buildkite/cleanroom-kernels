@@ -26,7 +26,8 @@ Build the release assets locally:
 scripts/build-release-assets.sh dist/kernels
 ```
 
-The default build writes both `rootfs` and `initrd` profiles:
+The default build writes the Cleanroom `rootfs` and `initrd` profiles, plus a
+separate SporeVM kernel asset:
 
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image`
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image.config`
@@ -36,6 +37,14 @@ The default build writes both `rootfs` and `initrd` profiles:
 - `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>-Image.config`
 - `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>-Image.sha256`
 - `cleanroom-darwin-vz-minimal-initrd-arm64-linux-<version>.manifest.json`
+- `sporevm-arm64-linux-<version>-Image`
+- `sporevm-arm64-linux-<version>-Image.config`
+- `sporevm-arm64-linux-<version>-Image.sha256`
+- `sporevm-arm64-linux-<version>.manifest.json`
+
+The SporeVM kernel is based on the minimal initrd kernel and enables `/dev/mem`
+so SporeVM's diskless fork smoke helper can access its fixed generation MMIO
+window. It is not a Cleanroom runtime profile.
 
 ## CI Contract
 
@@ -79,6 +88,9 @@ Useful environment variables:
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILES`, default `rootfs initrd`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE`, optional single-profile
   override for local builds
+- `CLEANROOM_KERNELS_INCLUDE_SPOREVM`, default `1`; set to `0` to skip SporeVM
+  kernel assets in `scripts/build-release-assets.sh`
+- `SPOREVM_KERNEL_ASSET_BASE`, default `sporevm-<arch>-linux-<version>`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH`, default `arm64`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE`, default `ubuntu:22.04`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM`, default `linux/amd64`

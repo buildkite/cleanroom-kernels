@@ -36,6 +36,7 @@ elif [[ -n "${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE+x}" ]]; then
 else
   KERNEL_PROFILES=(rootfs initrd)
 fi
+INCLUDE_SPOREVM_KERNELS="${CLEANROOM_KERNELS_INCLUDE_SPOREVM:-1}"
 KERNEL_ARCH="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH:-arm64}"
 DOCKER_IMAGE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE:-ubuntu:22.04}"
 DOCKER_PLATFORM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM:-linux/amd64}"
@@ -65,6 +66,11 @@ for profile in "${KERNEL_PROFILES[@]}"; do
       ;;
   esac
 done
+
+case "${INCLUDE_SPOREVM_KERNELS}" in
+  0|1) ;;
+  *) die "CLEANROOM_KERNELS_INCLUDE_SPOREVM must be 0 or 1" ;;
+esac
 
 case "${KERNEL_ARCH}" in
   arm64) ;;
@@ -164,6 +170,92 @@ PY
   printf '[build-release-assets] wrote %s\n' "${manifest_path}"
 }
 
+build_sporevm_kernel() {
+  local asset_base image_name image_path config_path sha256_path manifest_path kernel_sha256
+
+  asset_base="${SPOREVM_KERNEL_ASSET_BASE:-sporevm-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}"
+  image_name="${asset_base}-Image"
+  image_path="${OUTPUT_DIR}/${image_name}"
+  config_path="${image_path}.config"
+  sha256_path="${image_path}.sha256"
+  manifest_path="${OUTPUT_DIR}/${asset_base}.manifest.json"
+
+  rm -f "${image_path}" "${config_path}" "${sha256_path}" "${manifest_path}"
+
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH="${KERNEL_ARCH}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_VERSION="${KERNEL_VERSION}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE="${DOCKER_IMAGE}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" \
+  CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
+    "${SCRIPT_DIR}/build-sporevm-kernel.sh" "${image_path}" >/dev/null
+
+  [[ -f "${image_path}" ]] || die "SporeVM kernel image was not created: ${image_path}"
+  [[ -f "${config_path}" ]] || die "SporeVM kernel config was not created: ${config_path}"
+
+  kernel_sha256="$(sha256_file "${image_path}")"
+  printf '%s  %s\n' "${kernel_sha256}" "${image_name}" > "${sha256_path}"
+
+  ASSET_BASE="${asset_base}" \
+  DOCKER_IMAGE="${DOCKER_IMAGE}" \
+  DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
+  IMAGE_NAME="${image_name}" \
+  KERNEL_ARCH="${KERNEL_ARCH}" \
+  KERNEL_SHA256="${kernel_sha256}" \
+  KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
+  KERNEL_VERSION="${KERNEL_VERSION}" \
+  RELEASE_TAG="${RELEASE_TAG}" \
+  SOURCE_COMMIT="${SOURCE_COMMIT}" \
+  SOURCE_REPOSITORY="${SOURCE_REPOSITORY}" \
+  python3 - <<'PY' > "${manifest_path}"
+import json
+import os
+
+image_name = os.environ["IMAGE_NAME"]
+manifest = {
+    "id": os.environ["ASSET_BASE"],
+    "project": "sporevm",
+    "purpose": "fork-smoke",
+    "arch": os.environ["KERNEL_ARCH"],
+    "linux_version": os.environ["KERNEL_VERSION"],
+    "assets": {
+        "image": image_name,
+        "config": image_name + ".config",
+        "sha256": image_name + ".sha256",
+        "manifest": os.environ["ASSET_BASE"] + ".manifest.json",
+    },
+    "kernel_config": {
+        "devmem": True,
+        "strict_devmem": False,
+        "base": "cleanroom-darwin-vz-minimal-initrd",
+    },
+    "sha256": os.environ["KERNEL_SHA256"],
+    "source": {
+        "repository": os.environ["SOURCE_REPOSITORY"],
+        "commit": os.environ["SOURCE_COMMIT"],
+        "tag": os.environ["RELEASE_TAG"],
+    },
+    "builder": {
+        "repository": os.environ["SOURCE_REPOSITORY"],
+        "script": "scripts/build-sporevm-kernel.sh",
+        "docker_image": os.environ["DOCKER_IMAGE"],
+        "docker_platform": os.environ["DOCKER_PLATFORM"],
+        "kernel_tarball_sha256": os.environ["KERNEL_TARBALL_SHA256"],
+    },
+}
+print(json.dumps(manifest, indent=2, sort_keys=True))
+PY
+
+  printf '[build-release-assets] wrote %s\n' "${image_path}"
+  printf '[build-release-assets] wrote %s\n' "${config_path}"
+  printf '[build-release-assets] wrote %s\n' "${sha256_path}"
+  printf '[build-release-assets] wrote %s\n' "${manifest_path}"
+}
+
 for profile in "${KERNEL_PROFILES[@]}"; do
   build_profile "${profile}"
 done
+
+if [[ "${INCLUDE_SPOREVM_KERNELS}" = "1" ]]; then
+  build_sporevm_kernel
+fi

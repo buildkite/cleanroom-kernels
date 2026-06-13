@@ -9,6 +9,7 @@ KERNEL_PROFILE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE:-rootfs}"
 KERNEL_ARCH="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH:-arm64}"
 DOCKER_IMAGE="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE:-ubuntu:22.04}"
 DOCKER_PLATFORM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM:-linux/amd64}"
+ENABLE_DEVMEM="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ENABLE_DEVMEM:-0}"
 BUILD_VOLUME="${CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_BUILD_VOLUME:-cleanroom-darwin-vz-minimal-kernel}"
 DEFAULT_KERNEL_TARBALL_SHA256=""
 if [[ "${KERNEL_VERSION}" == "6.1.155" ]]; then
@@ -44,6 +45,15 @@ case "${KERNEL_PROFILE}" in
     ;;
 esac
 
+case "${ENABLE_DEVMEM}" in
+  0|1) ;;
+  *)
+    echo "unsupported CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ENABLE_DEVMEM: ${ENABLE_DEVMEM}" >&2
+    echo "expected 0 or 1" >&2
+    exit 1
+    ;;
+esac
+
 OUTPUT_PATH="${1:-${REPO_ROOT}/dist/darwin-vz-minimal-${KERNEL_PROFILE}-${KERNEL_ARCH}-kernel-${KERNEL_VERSION}-Image}"
 CONFIG_PATH="${OUTPUT_PATH}.config"
 mkdir -p "$(dirname "${OUTPUT_PATH}")"
@@ -58,6 +68,7 @@ docker run --rm \
   -e "KERNEL_ARCH=${KERNEL_ARCH}" \
   -e "KERNEL_CROSS_COMPILE=${KERNEL_CROSS_COMPILE}" \
   -e "KERNEL_TARBALL_SHA256=${KERNEL_TARBALL_SHA256}" \
+  -e "ENABLE_DEVMEM=${ENABLE_DEVMEM}" \
   -e "OUTPUT_BASENAME=${OUTPUT_BASENAME}" \
   -e "CONFIG_BASENAME=${CONFIG_BASENAME}" \
   -v "${BUILD_VOLUME}:/build" \
@@ -199,6 +210,13 @@ docker run --rm \
         -e RD_GZIP \
         -e CMDLINE_BOOL \
         --set-str CMDLINE "rdinit=/init"
+    fi
+
+    if [[ "${ENABLE_DEVMEM}" = "1" ]]; then
+      "${src}/scripts/config" --file "${out}/.config" \
+        -e DEVMEM \
+        -d STRICT_DEVMEM \
+        -d IO_STRICT_DEVMEM
     fi
 
     if [[ "${KERNEL_PROFILE}" = "rootfs" ]]; then
