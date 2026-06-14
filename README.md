@@ -26,8 +26,8 @@ Build the release assets locally:
 scripts/build-release-assets.sh dist/kernels
 ```
 
-The default build writes the Cleanroom `rootfs` and `initrd` profiles, plus a
-separate SporeVM kernel asset:
+The default build writes the Cleanroom `rootfs` and `initrd` profiles, plus
+separate SporeVM kernel assets:
 
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image`
 - `cleanroom-darwin-vz-minimal-rootfs-arm64-linux-<version>-Image.config`
@@ -41,10 +41,17 @@ separate SporeVM kernel asset:
 - `sporevm-arm64-linux-<version>-Image.config`
 - `sporevm-arm64-linux-<version>-Image.sha256`
 - `sporevm-arm64-linux-<version>.manifest.json`
+- `sporevm-run-arm64-linux-<version>-Image`
+- `sporevm-run-arm64-linux-<version>-Image.config`
+- `sporevm-run-arm64-linux-<version>-Image.sha256`
+- `sporevm-run-arm64-linux-<version>.manifest.json`
 
-The SporeVM kernel is based on the minimal initrd kernel and enables `/dev/mem`
-so SporeVM's diskless fork smoke helper can access its fixed generation MMIO
-window. It is not a Cleanroom runtime profile.
+The legacy SporeVM kernel is based on the minimal initrd profile and enables
+`/dev/mem` so SporeVM's diskless fork smoke helper can access its fixed
+generation MMIO window. The SporeVM run kernel combines the minimal initrd
+profile with virtio-blk and ext4 support so `spore run` can use the same kernel
+for minimal initrd commands and read-only rootfs execution. Neither is a
+Cleanroom runtime profile.
 
 ## CI Contract
 
@@ -91,6 +98,8 @@ Useful environment variables:
 - `CLEANROOM_KERNELS_INCLUDE_SPOREVM`, default `1`; set to `0` to skip SporeVM
   kernel assets in `scripts/build-release-assets.sh`
 - `SPOREVM_KERNEL_ASSET_BASE`, default `sporevm-<arch>-linux-<version>`
+- `SPOREVM_RUN_KERNEL_ASSET_BASE`, default
+  `sporevm-run-<arch>-linux-<version>`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_ARCH`, default `arm64`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_IMAGE`, default `ubuntu:22.04`
 - `CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM`, default `linux/amd64`
