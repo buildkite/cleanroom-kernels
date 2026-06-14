@@ -170,10 +170,18 @@ PY
   printf '[build-release-assets] wrote %s\n' "${manifest_path}"
 }
 
-build_sporevm_kernel() {
-  local asset_base image_name image_path config_path sha256_path manifest_path kernel_sha256
+build_sporevm_asset() {
+  local purpose="$1"
+  local asset_base="$2"
+  local build_script="$3"
+  local kernel_config_base="$4"
+  local kernel_config_devmem="${5:-}"
+  local kernel_config_strict_devmem="${6:-}"
+  local kernel_config_initrd="${7:-}"
+  local kernel_config_virtio_blk="${8:-}"
+  local kernel_config_ext4="${9:-}"
+  local image_name image_path config_path sha256_path manifest_path kernel_sha256
 
-  asset_base="${SPOREVM_KERNEL_ASSET_BASE:-sporevm-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}"
   image_name="${asset_base}-Image"
   image_path="${OUTPUT_DIR}/${image_name}"
   config_path="${image_path}.config"
@@ -188,7 +196,7 @@ build_sporevm_kernel() {
   CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
   CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" \
   CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
-    "${SCRIPT_DIR}/build-sporevm-kernel.sh" "${image_path}" >/dev/null
+    "${SCRIPT_DIR}/${build_script}" "${image_path}" >/dev/null
 
   [[ -f "${image_path}" ]] || die "SporeVM kernel image was not created: ${image_path}"
   [[ -f "${config_path}" ]] || die "SporeVM kernel config was not created: ${config_path}"
@@ -201,10 +209,18 @@ build_sporevm_kernel() {
   DOCKER_PLATFORM="${DOCKER_PLATFORM}" \
   IMAGE_NAME="${image_name}" \
   KERNEL_ARCH="${KERNEL_ARCH}" \
+  KERNEL_CONFIG_BASE="${kernel_config_base}" \
+  KERNEL_CONFIG_DEVMEM="${kernel_config_devmem}" \
+  KERNEL_CONFIG_STRICT_DEVMEM="${kernel_config_strict_devmem}" \
+  KERNEL_CONFIG_INITRD="${kernel_config_initrd}" \
+  KERNEL_CONFIG_VIRTIO_BLK="${kernel_config_virtio_blk}" \
+  KERNEL_CONFIG_EXT4="${kernel_config_ext4}" \
   KERNEL_SHA256="${kernel_sha256}" \
   KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
   KERNEL_VERSION="${KERNEL_VERSION}" \
+  PURPOSE="${purpose}" \
   RELEASE_TAG="${RELEASE_TAG}" \
+  BUILD_SCRIPT="${build_script}" \
   SOURCE_COMMIT="${SOURCE_COMMIT}" \
   SOURCE_REPOSITORY="${SOURCE_REPOSITORY}" \
   python3 - <<'PY' > "${manifest_path}"
@@ -212,10 +228,22 @@ import json
 import os
 
 image_name = os.environ["IMAGE_NAME"]
+kernel_config = {"base": os.environ["KERNEL_CONFIG_BASE"]}
+for key, env_name in (
+    ("devmem", "KERNEL_CONFIG_DEVMEM"),
+    ("strict_devmem", "KERNEL_CONFIG_STRICT_DEVMEM"),
+    ("initrd", "KERNEL_CONFIG_INITRD"),
+    ("virtio_blk", "KERNEL_CONFIG_VIRTIO_BLK"),
+    ("ext4", "KERNEL_CONFIG_EXT4"),
+):
+    value = os.environ[env_name]
+    if value:
+        kernel_config[key] = value == "1"
+
 manifest = {
     "id": os.environ["ASSET_BASE"],
     "project": "sporevm",
-    "purpose": "fork-smoke",
+    "purpose": os.environ["PURPOSE"],
     "arch": os.environ["KERNEL_ARCH"],
     "linux_version": os.environ["KERNEL_VERSION"],
     "assets": {
@@ -224,11 +252,7 @@ manifest = {
         "sha256": image_name + ".sha256",
         "manifest": os.environ["ASSET_BASE"] + ".manifest.json",
     },
-    "kernel_config": {
-        "devmem": True,
-        "strict_devmem": False,
-        "base": "cleanroom-darwin-vz-minimal-initrd",
-    },
+    "kernel_config": kernel_config,
     "sha256": os.environ["KERNEL_SHA256"],
     "source": {
         "repository": os.environ["SOURCE_REPOSITORY"],
@@ -237,7 +261,7 @@ manifest = {
     },
     "builder": {
         "repository": os.environ["SOURCE_REPOSITORY"],
-        "script": "scripts/build-sporevm-kernel.sh",
+        "script": "scripts/" + os.environ["BUILD_SCRIPT"],
         "docker_image": os.environ["DOCKER_IMAGE"],
         "docker_platform": os.environ["DOCKER_PLATFORM"],
         "kernel_tarball_sha256": os.environ["KERNEL_TARBALL_SHA256"],
@@ -252,10 +276,34 @@ PY
   printf '[build-release-assets] wrote %s\n' "${manifest_path}"
 }
 
+build_sporevm_kernel() {
+  build_sporevm_asset \
+    "fork-smoke" \
+    "${SPOREVM_KERNEL_ASSET_BASE:-sporevm-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}" \
+    "build-sporevm-kernel.sh" \
+    "cleanroom-darwin-vz-minimal-initrd" \
+    "1" \
+    "0"
+}
+
+build_sporevm_run_kernel() {
+  build_sporevm_asset \
+    "run" \
+    "${SPOREVM_RUN_KERNEL_ASSET_BASE:-sporevm-run-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}" \
+    "build-sporevm-run-kernel.sh" \
+    "cleanroom-darwin-vz-minimal-initrd+rootfs" \
+    "" \
+    "" \
+    "1" \
+    "1" \
+    "1"
+}
+
 for profile in "${KERNEL_PROFILES[@]}"; do
   build_profile "${profile}"
 done
 
 if [[ "${INCLUDE_SPOREVM_KERNELS}" = "1" ]]; then
   build_sporevm_kernel
+  build_sporevm_run_kernel
 fi

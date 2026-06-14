@@ -37,10 +37,10 @@ if [[ -z "${KERNEL_TARBALL_SHA256}" ]]; then
 fi
 
 case "${KERNEL_PROFILE}" in
-  initrd|rootfs) ;;
+  initrd|rootfs|sporevm-run) ;;
   *)
     echo "unsupported CLEANROOM_DARWIN_VZ_MINIMAL_KERNEL_PROFILE: ${KERNEL_PROFILE}" >&2
-    echo "expected initrd or rootfs" >&2
+    echo "expected initrd, rootfs, or sporevm-run" >&2
     exit 1
     ;;
 esac
@@ -204,7 +204,7 @@ docker run --rm \
       -d BPF_SYSCALL \
       -d ZSWAP
 
-    if [[ "${KERNEL_PROFILE}" = "initrd" ]]; then
+    if [[ "${KERNEL_PROFILE}" = "initrd" || "${KERNEL_PROFILE}" = "sporevm-run" ]]; then
       "${src}/scripts/config" --file "${out}/.config" \
         -e BLK_DEV_INITRD \
         -e RD_GZIP \
@@ -219,7 +219,7 @@ docker run --rm \
         -d IO_STRICT_DEVMEM
     fi
 
-    if [[ "${KERNEL_PROFILE}" = "rootfs" ]]; then
+    if [[ "${KERNEL_PROFILE}" = "rootfs" || "${KERNEL_PROFILE}" = "sporevm-run" ]]; then
       "${src}/scripts/config" --file "${out}/.config" \
         -e BLOCK \
         -e BLK_DEV \
