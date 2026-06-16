@@ -217,6 +217,11 @@ docker run --rm \
         -e DEVMEM \
         -d STRICT_DEVMEM \
         -d IO_STRICT_DEVMEM
+    else
+      "${src}/scripts/config" --file "${out}/.config" \
+        -d DEVMEM \
+        -d STRICT_DEVMEM \
+        -d IO_STRICT_DEVMEM
     fi
 
     if [[ "${KERNEL_PROFILE}" = "rootfs" || "${KERNEL_PROFILE}" = "sporevm-run" ]]; then
@@ -235,6 +240,11 @@ docker run --rm \
         -e PACKET \
         -e UNIX \
         -e DEVTMPFS_MOUNT
+    fi
+
+    if [[ "${KERNEL_PROFILE}" = "sporevm-run" ]]; then
+      "${src}/scripts/config" --file "${out}/.config" \
+        -e MULTIUSER
     fi
 
     make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" olddefconfig

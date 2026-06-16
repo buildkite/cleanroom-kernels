@@ -24,6 +24,30 @@ sha256_file() {
   die "sha256 tool not found (need sha256sum or shasum)"
 }
 
+require_config_bool() {
+  local config_path="$1"
+  local symbol="$2"
+  local expected="$3"
+
+  case "${expected}" in
+    "")
+      return
+      ;;
+    1)
+      grep -qx "CONFIG_${symbol}=y" "${config_path}" || die "${config_path} missing CONFIG_${symbol}=y"
+      ;;
+    0)
+      if grep -qx "CONFIG_${symbol}=y" "${config_path}"; then
+        die "${config_path} unexpectedly enables CONFIG_${symbol}"
+      fi
+      grep -qx "# CONFIG_${symbol} is not set" "${config_path}" || die "${config_path} missing disabled CONFIG_${symbol}"
+      ;;
+    *)
+      die "invalid expected config value for CONFIG_${symbol}: ${expected}"
+      ;;
+  esac
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -180,6 +204,7 @@ build_sporevm_asset() {
   local kernel_config_initrd="${7:-}"
   local kernel_config_virtio_blk="${8:-}"
   local kernel_config_ext4="${9:-}"
+  local kernel_config_multiuser="${10:-}"
   local image_name image_path config_path sha256_path manifest_path kernel_sha256
 
   image_name="${asset_base}-Image"
@@ -201,6 +226,13 @@ build_sporevm_asset() {
   [[ -f "${image_path}" ]] || die "SporeVM kernel image was not created: ${image_path}"
   [[ -f "${config_path}" ]] || die "SporeVM kernel config was not created: ${config_path}"
 
+  require_config_bool "${config_path}" "DEVMEM" "${kernel_config_devmem}"
+  require_config_bool "${config_path}" "STRICT_DEVMEM" "${kernel_config_strict_devmem}"
+  require_config_bool "${config_path}" "BLK_DEV_INITRD" "${kernel_config_initrd}"
+  require_config_bool "${config_path}" "VIRTIO_BLK" "${kernel_config_virtio_blk}"
+  require_config_bool "${config_path}" "EXT4_FS" "${kernel_config_ext4}"
+  require_config_bool "${config_path}" "MULTIUSER" "${kernel_config_multiuser}"
+
   kernel_sha256="$(sha256_file "${image_path}")"
   printf '%s  %s\n' "${kernel_sha256}" "${image_name}" > "${sha256_path}"
 
@@ -215,6 +247,7 @@ build_sporevm_asset() {
   KERNEL_CONFIG_INITRD="${kernel_config_initrd}" \
   KERNEL_CONFIG_VIRTIO_BLK="${kernel_config_virtio_blk}" \
   KERNEL_CONFIG_EXT4="${kernel_config_ext4}" \
+  KERNEL_CONFIG_MULTIUSER="${kernel_config_multiuser}" \
   KERNEL_SHA256="${kernel_sha256}" \
   KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
   KERNEL_VERSION="${KERNEL_VERSION}" \
@@ -235,6 +268,7 @@ for key, env_name in (
     ("initrd", "KERNEL_CONFIG_INITRD"),
     ("virtio_blk", "KERNEL_CONFIG_VIRTIO_BLK"),
     ("ext4", "KERNEL_CONFIG_EXT4"),
+    ("multiuser", "KERNEL_CONFIG_MULTIUSER"),
 ):
     value = os.environ[env_name]
     if value:
@@ -292,8 +326,9 @@ build_sporevm_run_kernel() {
     "${SPOREVM_RUN_KERNEL_ASSET_BASE:-sporevm-run-${KERNEL_ARCH}-linux-${KERNEL_VERSION}}" \
     "build-sporevm-run-kernel.sh" \
     "cleanroom-darwin-vz-minimal-initrd+rootfs" \
+    "0" \
     "" \
-    "" \
+    "1" \
     "1" \
     "1" \
     "1"
