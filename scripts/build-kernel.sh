@@ -244,7 +244,10 @@ docker run --rm \
 
     if [[ "${KERNEL_PROFILE}" = "sporevm-run" ]]; then
       "${src}/scripts/config" --file "${out}/.config" \
-        -e MULTIUSER
+        -e MULTIUSER \
+        -e SYSVIPC \
+        -e POSIX_TIMERS \
+        -e BINFMT_SCRIPT
     fi
 
     make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" olddefconfig

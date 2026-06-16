@@ -205,6 +205,9 @@ build_sporevm_asset() {
   local kernel_config_virtio_blk="${8:-}"
   local kernel_config_ext4="${9:-}"
   local kernel_config_multiuser="${10:-}"
+  local kernel_config_sysvipc="${11:-}"
+  local kernel_config_posix_timers="${12:-}"
+  local kernel_config_binfmt_script="${13:-}"
   local image_name image_path config_path sha256_path manifest_path kernel_sha256
 
   image_name="${asset_base}-Image"
@@ -232,6 +235,9 @@ build_sporevm_asset() {
   require_config_bool "${config_path}" "VIRTIO_BLK" "${kernel_config_virtio_blk}"
   require_config_bool "${config_path}" "EXT4_FS" "${kernel_config_ext4}"
   require_config_bool "${config_path}" "MULTIUSER" "${kernel_config_multiuser}"
+  require_config_bool "${config_path}" "SYSVIPC" "${kernel_config_sysvipc}"
+  require_config_bool "${config_path}" "POSIX_TIMERS" "${kernel_config_posix_timers}"
+  require_config_bool "${config_path}" "BINFMT_SCRIPT" "${kernel_config_binfmt_script}"
 
   kernel_sha256="$(sha256_file "${image_path}")"
   printf '%s  %s\n' "${kernel_sha256}" "${image_name}" > "${sha256_path}"
@@ -248,6 +254,9 @@ build_sporevm_asset() {
   KERNEL_CONFIG_VIRTIO_BLK="${kernel_config_virtio_blk}" \
   KERNEL_CONFIG_EXT4="${kernel_config_ext4}" \
   KERNEL_CONFIG_MULTIUSER="${kernel_config_multiuser}" \
+  KERNEL_CONFIG_SYSVIPC="${kernel_config_sysvipc}" \
+  KERNEL_CONFIG_POSIX_TIMERS="${kernel_config_posix_timers}" \
+  KERNEL_CONFIG_BINFMT_SCRIPT="${kernel_config_binfmt_script}" \
   KERNEL_SHA256="${kernel_sha256}" \
   KERNEL_TARBALL_SHA256="${KERNEL_TARBALL_SHA256}" \
   KERNEL_VERSION="${KERNEL_VERSION}" \
@@ -269,6 +278,9 @@ for key, env_name in (
     ("virtio_blk", "KERNEL_CONFIG_VIRTIO_BLK"),
     ("ext4", "KERNEL_CONFIG_EXT4"),
     ("multiuser", "KERNEL_CONFIG_MULTIUSER"),
+    ("sysvipc", "KERNEL_CONFIG_SYSVIPC"),
+    ("posix_timers", "KERNEL_CONFIG_POSIX_TIMERS"),
+    ("binfmt_script", "KERNEL_CONFIG_BINFMT_SCRIPT"),
 ):
     value = os.environ[env_name]
     if value:
@@ -328,6 +340,9 @@ build_sporevm_run_kernel() {
     "cleanroom-darwin-vz-minimal-initrd+rootfs" \
     "0" \
     "" \
+    "1" \
+    "1" \
+    "1" \
     "1" \
     "1" \
     "1" \
