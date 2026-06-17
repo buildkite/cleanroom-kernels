@@ -52,8 +52,12 @@ generation MMIO window. The SporeVM run kernel combines the minimal initrd
 profile with virtio-blk, ext4, multiuser, System V IPC, POSIX timers, and
 script interpreter support so `spore run` can use the same kernel for minimal
 initrd commands and read-only rootfs execution, including rootfs init systems
-that drop privileges, PostgreSQL workloads, and Ruby/Bundler binstubs. Neither
-is a Cleanroom runtime profile.
+that drop privileges, PostgreSQL workloads, and Ruby/Bundler binstubs. It also
+enables the Docker-oriented kernel facilities needed for a warm in-guest Docker
+daemon and Docker Compose workloads: namespaces, cgroups, seccomp, POSIX
+message queues, keys, `overlayfs`, `veth`, bridge netfilter, NAT, iptables and
+nftables compatibility, `tun`, `macvlan`, `ipvlan`, and `vxlan`. Neither is a
+Cleanroom runtime profile.
 
 ## CI Contract
 

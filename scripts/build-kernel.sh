@@ -247,7 +247,63 @@ docker run --rm \
         -e MULTIUSER \
         -e SYSVIPC \
         -e POSIX_TIMERS \
-        -e BINFMT_SCRIPT
+        -e BINFMT_SCRIPT \
+        -e FHANDLE \
+        -e POSIX_MQUEUE \
+        -e KEYS \
+        -e NAMESPACES \
+        -e UTS_NS \
+        -e IPC_NS \
+        -e PID_NS \
+        -e NET_NS \
+        -e USER_NS \
+        -e CGROUPS \
+        -e CGROUP_SCHED \
+        -e FAIR_GROUP_SCHED \
+        -e CFS_BANDWIDTH \
+        -e CGROUP_CPUACCT \
+        -e CGROUP_DEVICE \
+        -e CGROUP_FREEZER \
+        -e CGROUP_PIDS \
+        -e CPUSETS \
+        -e PROC_PID_CPUSET \
+        -e MEMCG \
+        -e SECCOMP \
+        -e SECCOMP_FILTER \
+        -e OVERLAY_FS \
+        -e TUN \
+        -e VETH \
+        -e MACVLAN \
+        -e IPVLAN \
+        -e VXLAN \
+        -e BRIDGE \
+        -e BRIDGE_NETFILTER \
+        -e NETFILTER \
+        -e NETFILTER_ADVANCED \
+        -e NF_CONNTRACK \
+        -e NF_NAT \
+        -e NETFILTER_XTABLES \
+        -e NETFILTER_XT_TARGET_CHECKSUM \
+        -e NETFILTER_XT_TARGET_MASQUERADE \
+        -e NETFILTER_XT_TARGET_REDIRECT \
+        -e NETFILTER_XT_MATCH_ADDRTYPE \
+        -e NETFILTER_XT_MATCH_CONNTRACK \
+        -e NF_TABLES \
+        -e NF_TABLES_IPV4 \
+        -e NFT_COMPAT \
+        -e NFT_CT \
+        -e NFT_MASQ \
+        -e NFT_NAT \
+        -e NFT_REJECT \
+        -e NFT_REJECT_IPV4 \
+        -e IP_NF_IPTABLES \
+        -e IP_NF_FILTER \
+        -e IP_NF_TARGET_REJECT \
+        -e IP_NF_NAT \
+        -e IP_NF_TARGET_MASQUERADE \
+        -e IP_NF_TARGET_REDIRECT \
+        -e IP_NF_MANGLE \
+        -e IP_NF_RAW
     fi
 
     make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" olddefconfig
