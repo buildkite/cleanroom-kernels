@@ -49,10 +49,11 @@ separate SporeVM kernel assets:
 The legacy SporeVM kernel is based on the minimal initrd profile and enables
 `/dev/mem` so SporeVM's diskless fork smoke helper can access its fixed
 generation MMIO window. The SporeVM run kernel combines the minimal initrd
-profile with virtio-blk, ext4, and multiuser support so `spore run` can use
-the same kernel for minimal initrd commands and read-only rootfs execution,
-including rootfs init systems that drop privileges with uid/gid-changing
-syscalls. Neither is a Cleanroom runtime profile.
+profile with virtio-blk, ext4, multiuser, System V IPC, POSIX timers, and
+script interpreter support so `spore run` can use the same kernel for minimal
+initrd commands and read-only rootfs execution, including rootfs init systems
+that drop privileges, PostgreSQL workloads, and Ruby/Bundler binstubs. Neither
+is a Cleanroom runtime profile.
 
 ## CI Contract
 
