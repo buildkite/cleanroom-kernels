@@ -208,7 +208,12 @@ build_sporevm_asset() {
   local kernel_config_sysvipc="${11:-}"
   local kernel_config_posix_timers="${12:-}"
   local kernel_config_binfmt_script="${13:-}"
+  local -a required_enabled_config_symbols=()
   local image_name image_path config_path sha256_path manifest_path kernel_sha256
+
+  if [[ "$#" -gt 13 ]]; then
+    required_enabled_config_symbols=("${@:14}")
+  fi
 
   image_name="${asset_base}-Image"
   image_path="${OUTPUT_DIR}/${image_name}"
@@ -238,6 +243,9 @@ build_sporevm_asset() {
   require_config_bool "${config_path}" "SYSVIPC" "${kernel_config_sysvipc}"
   require_config_bool "${config_path}" "POSIX_TIMERS" "${kernel_config_posix_timers}"
   require_config_bool "${config_path}" "BINFMT_SCRIPT" "${kernel_config_binfmt_script}"
+  for symbol in "${required_enabled_config_symbols[@]}"; do
+    require_config_bool "${config_path}" "${symbol}" "1"
+  done
 
   kernel_sha256="$(sha256_file "${image_path}")"
   printf '%s  %s\n' "${kernel_sha256}" "${image_name}" > "${sha256_path}"
@@ -346,7 +354,63 @@ build_sporevm_run_kernel() {
     "1" \
     "1" \
     "1" \
-    "1"
+    "1" \
+    "FHANDLE" \
+    "POSIX_MQUEUE" \
+    "KEYS" \
+    "NAMESPACES" \
+    "UTS_NS" \
+    "IPC_NS" \
+    "PID_NS" \
+    "NET_NS" \
+    "USER_NS" \
+    "CGROUPS" \
+    "CGROUP_SCHED" \
+    "FAIR_GROUP_SCHED" \
+    "CFS_BANDWIDTH" \
+    "CGROUP_CPUACCT" \
+    "CGROUP_DEVICE" \
+    "CGROUP_FREEZER" \
+    "CGROUP_PIDS" \
+    "CPUSETS" \
+    "PROC_PID_CPUSET" \
+    "MEMCG" \
+    "SECCOMP" \
+    "SECCOMP_FILTER" \
+    "OVERLAY_FS" \
+    "TUN" \
+    "VETH" \
+    "MACVLAN" \
+    "IPVLAN" \
+    "VXLAN" \
+    "BRIDGE" \
+    "BRIDGE_NETFILTER" \
+    "NETFILTER" \
+    "NETFILTER_ADVANCED" \
+    "NF_CONNTRACK" \
+    "NF_NAT" \
+    "NETFILTER_XTABLES" \
+    "NETFILTER_XT_TARGET_CHECKSUM" \
+    "NETFILTER_XT_TARGET_MASQUERADE" \
+    "NETFILTER_XT_TARGET_REDIRECT" \
+    "NETFILTER_XT_MATCH_ADDRTYPE" \
+    "NETFILTER_XT_MATCH_CONNTRACK" \
+    "NF_TABLES" \
+    "NF_TABLES_IPV4" \
+    "NFT_COMPAT" \
+    "NFT_CT" \
+    "NFT_MASQ" \
+    "NFT_NAT" \
+    "NFT_REJECT" \
+    "NFT_REJECT_IPV4" \
+    "IP_NF_IPTABLES" \
+    "IP_NF_FILTER" \
+    "IP_NF_TARGET_REJECT" \
+    "IP_NF_NAT" \
+    "IP_NF_TARGET_MASQUERADE" \
+    "IP_NF_TARGET_REDIRECT" \
+    "IP_NF_MANGLE" \
+    "IP_NF_RAW"
 }
 
 for profile in "${KERNEL_PROFILES[@]}"; do
