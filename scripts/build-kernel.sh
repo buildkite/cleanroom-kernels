@@ -248,6 +248,11 @@ docker run --rm \
         -e SYSVIPC \
         -e POSIX_TIMERS \
         -e BINFMT_SCRIPT \
+        -e FILE_LOCKING \
+        -e SHMEM \
+        -e TMPFS \
+        -e FSNOTIFY \
+        -e INOTIFY_USER \
         -e FHANDLE \
         -e POSIX_MQUEUE \
         -e KEYS \
@@ -258,6 +263,8 @@ docker run --rm \
         -e NET_NS \
         -e USER_NS \
         -e CGROUPS \
+        -e BPF_SYSCALL \
+        -e CGROUP_BPF \
         -e CGROUP_SCHED \
         -e FAIR_GROUP_SCHED \
         -e CFS_BANDWIDTH \
