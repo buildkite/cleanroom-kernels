@@ -355,6 +355,11 @@ build_sporevm_run_kernel() {
     "1" \
     "1" \
     "1" \
+    "FILE_LOCKING" \
+    "SHMEM" \
+    "TMPFS" \
+    "FSNOTIFY" \
+    "INOTIFY_USER" \
     "FHANDLE" \
     "POSIX_MQUEUE" \
     "KEYS" \
@@ -365,6 +370,8 @@ build_sporevm_run_kernel() {
     "NET_NS" \
     "USER_NS" \
     "CGROUPS" \
+    "BPF_SYSCALL" \
+    "CGROUP_BPF" \
     "CGROUP_SCHED" \
     "FAIR_GROUP_SCHED" \
     "CFS_BANDWIDTH" \
