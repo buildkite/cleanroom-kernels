@@ -355,6 +355,8 @@ build_sporevm_run_kernel() {
     "1" \
     "1" \
     "1" \
+    "HW_RANDOM" \
+    "HW_RANDOM_VIRTIO" \
     "FILE_LOCKING" \
     "SHMEM" \
     "TMPFS" \
