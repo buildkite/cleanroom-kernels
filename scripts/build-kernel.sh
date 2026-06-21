@@ -248,6 +248,8 @@ docker run --rm \
         -e SYSVIPC \
         -e POSIX_TIMERS \
         -e BINFMT_SCRIPT \
+        -e HW_RANDOM \
+        -e HW_RANDOM_VIRTIO \
         -e FILE_LOCKING \
         -e SHMEM \
         -e TMPFS \
