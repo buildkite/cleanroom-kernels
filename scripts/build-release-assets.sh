@@ -419,7 +419,13 @@ build_sporevm_run_kernel() {
     "IP_NF_TARGET_MASQUERADE" \
     "IP_NF_TARGET_REDIRECT" \
     "IP_NF_MANGLE" \
-    "IP_NF_RAW"
+    "IP_NF_RAW" \
+    "MEMORY_HOTPLUG" \
+    "MEMORY_HOTPLUG_DEFAULT_ONLINE" \
+    "MEMORY_HOTREMOVE" \
+    "CONTIG_ALLOC" \
+    "EXCLUSIVE_SYSTEM_RAM" \
+    "VIRTIO_MEM"
 }
 
 for profile in "${KERNEL_PROFILES[@]}"; do
