@@ -312,7 +312,15 @@ docker run --rm \
         -e IP_NF_TARGET_MASQUERADE \
         -e IP_NF_TARGET_REDIRECT \
         -e IP_NF_MANGLE \
-        -e IP_NF_RAW
+        -e IP_NF_RAW \
+        -e MEMORY_HOTPLUG \
+        -e MEMORY_HOTPLUG_DEFAULT_ONLINE \
+        -e MEMORY_HOTREMOVE \
+        -e MIGRATION \
+        -e CONTIG_ALLOC \
+        -e EXCLUSIVE_SYSTEM_RAM \
+        -e SPARSEMEM_VMEMMAP \
+        -e VIRTIO_MEM
     fi
 
     make -C "${src}" O="${out}" ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${KERNEL_CROSS_COMPILE}" olddefconfig
