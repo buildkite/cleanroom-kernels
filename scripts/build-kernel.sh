@@ -277,6 +277,7 @@ docker run --rm \
         -e CPUSETS \
         -e PROC_PID_CPUSET \
         -e MEMCG \
+        -e PSI \
         -e SECCOMP \
         -e SECCOMP_FILTER \
         -e OVERLAY_FS \
