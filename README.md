@@ -73,6 +73,9 @@ That writes direct release assets under `dist/kernels/`, creates
 `dist/kernels.tar.gz`, and uploads both as Buildkite artifacts through
 `buildkite-agent` when it is available.
 
+The Buildkite pipeline builds only Cleanroom kernel assets. SporeVM kernel
+release assets are built in `buildkite/sporevm-kernels`.
+
 Tagged Buildkite builds then run:
 
 ```sh

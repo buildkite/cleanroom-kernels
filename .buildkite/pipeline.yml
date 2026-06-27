@@ -4,6 +4,8 @@ steps:
     command: "scripts/ci-build-release-assets.sh"
     concurrency: 1
     concurrency_group: cleanroom-kernels-release-assets
+    env:
+      CLEANROOM_KERNELS_INCLUDE_SPOREVM: "0"
     timeout_in_minutes: 90
     agents:
       queue: cleanroom
